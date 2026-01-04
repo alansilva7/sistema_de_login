@@ -1,0 +1,51 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum QueueStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+}
+
+model Users {
+  id       Int     @id @default(autoincrement())
+  email    String  @unique
+  name     String?
+  password String
+}
+
+model Queues {
+  id Int @id @default(autoincrement())
+  description String?
+  method String
+  type String
+  response String?
+  index String?
+  params Json?
+  priority Int @default(10)
+  status  QueueStatus @default(PENDING)
+  attempt Int @default(0)
+  max_attempts Int @default(5)
+  active Boolean @default(true)
+  deleted Boolean @default(false)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  executed_at DateTime?
+  finished_at DateTime?
+  scheduled_at DateTime?
+  recurring Boolean @default(false)
+  cron_expr String?
+}
