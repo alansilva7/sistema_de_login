@@ -21,6 +21,7 @@ type FunctionToCall = (
 
 interface QueueData {
   id: number;
+  attempt: number;
   method: string;
   type: QueueType;
   params: any;
@@ -222,7 +223,7 @@ export class QueueManager {
     try {
       await this.update(queue.id, {
         status: QueueStatus.PROCESSING,
-        attempt: 1,
+        attempt: queue.attempt + 1,
         executed_at: new Date(),
       });
 
