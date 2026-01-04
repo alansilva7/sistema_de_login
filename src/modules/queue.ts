@@ -51,7 +51,9 @@ interface UpdateQueueData {
 
 export class QueueManager {
   private queueProcessing = false;
+  private queueInProcess = new Set<number>();
   private queueHandlers = new Map<string, FunctionToCall>();
+  private maxQueueRegisters = 20;
 
   /* =========================
      REGISTRO DE HANDLERS
@@ -107,16 +109,31 @@ export class QueueManager {
   private async getQueueToProcess(): Promise<QueueData[]> {
     return prisma.queues.findMany({
       where: {
+        id: {
+          notIn: Array.from(this.queueInProcess),
+        },
         status: {
           in: [QueueStatus.PENDING, QueueStatus.FAILED],
         },
         attempts: {
           lt: prisma.queues.fields.max_attempts,
         },
+        OR: [
+          {
+            scheduled_at: null,
+          },
+          {
+            scheduled_at: {
+              lte: new Date(),
+            },
+          },
+        ],
       },
-      orderBy: {
-        priority: 'asc',
-      },
+      orderBy: [
+        { priority: 'asc' },
+        { created_at: 'desc' },
+      ],
+      take: this.maxQueueRegisters,
     });
   }
 
@@ -195,6 +212,13 @@ export class QueueManager {
   }
 
   private async processQueue(queue: QueueData) {
+    // Controle de concorrencia
+    if (this.queueInProcess.has(queue.id)) {
+      return;
+    }
+    
+    this.queueInProcess.add(queue.id);
+
     try {
       await this.update(queue.id, {
         status: QueueStatus.PROCESSING,
@@ -224,6 +248,8 @@ export class QueueManager {
         finished_at: new Date(),
         response: error?.message || 'Erro desconhecido',
       });
+    } finally {
+      this.queueInProcess.delete(queue.id);
     }
   }
 
