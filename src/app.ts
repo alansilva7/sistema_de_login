@@ -1,14 +1,16 @@
 import express from "express"
 import routes from "./routes"
-
+import { queueManager } from "./modules/queue";
+import { registerAll } from "./queue";
 
 class App {
     public server:express.Application
     constructor() {
         this.server = express()
 
-        this.middlewares()
-        this.routes()
+        this.middlewares();
+        this.routes();
+        this.queue();
     }
 
     middlewares() {
@@ -17,6 +19,11 @@ class App {
 
     routes() {
         this.server.use(routes)
+    }
+
+    queue() {
+        registerAll();
+        queueManager.start();
     }
 }
 
